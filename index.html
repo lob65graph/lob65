@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LOB65 Graph — Layered Model</title>
+<link rel="icon" type="image/png" href="favicon_LOB65.png">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+</head>
+<body>
+<div id="root">
+<div id="hdr">
+  <div id="hdr-left">
+    <div id="hdr-title">LOB65 GRAPH — LAYERED MODEL</div>
+    <div id="hdr-sub">K-CORE · BETWEENNESS · FIEDLER · RETROGRADE · Δ STRUCTURAL</div>
+    <div id="hdr-theme">— no theme —</div>
+  </div>
+  <div id="hdr-tools">
+    <button class="btn" style="color:var(--gold)" onclick="loadDefault()">↺ LOB65 preset</button>
+    <button class="btn" onclick="loadTemplate()">⬚ New</button>
+    <button class="btn danger" onclick="clearAll()">✕ Clear all</button>
+    <select id="weightCurveSelect" style="background:#1a1a1a;color:var(--gold);border:1px solid var(--border2);padding:4px;font:inherit;">
+      <option value="linear">Linear</option>
+      <option value="exponential">Exponential</option>
+      <option value="threshold">Threshold</option>
+    </select>
+    <label style="color:var(--text3);font-size:12px;margin-left:5px">k-exp</label>
+    <input type="number" id="kExpInput" value="3.0" step="0.5" min="0.5" max="10" style="width:60px;background:#1a1a1a;border:1px solid var(--border2);color:var(--cyan);">
+    <label style="color:var(--text3);font-size:12px;margin-left:5px">thr-point</label>
+    <input type="number" id="thrPointInput" value="0.5" step="0.05" min="0.1" max="1.0" style="width:60px;background:#1a1a1a;border:1px solid var(--border2);color:var(--cyan);">
+    <label style="color:var(--text3);font-size:12px;margin-left:5px">
+      <input type="checkbox" id="useLogCheck" onchange="computeGraph()"> log-cost
+    </label>
+    <button class="btn" id="weight-toggle" onclick="toggleWeighted()" style="color:var(--text3);border-color:#333">⚖ Switch to Weighted</button>
+    <label style="color:var(--text3);font-size:12px;margin-left:5px">
+      <input type="checkbox" id="filterByWeightCheck" onchange="computeGraph()"> filter weight ≥
+    </label>
+    <input type="number" id="visualThresholdInput" value="0.10" step="0.01" min="0" max="1" style="width:70px;background:#1a1a1a;border:1px solid var(--border2);color:var(--cyan);">
+    
+    <!-- FILTRI PER ASPETTI -->
+    <div class="filter-checkbox-group">
+      <label><input type="checkbox" id="filterConj" checked onchange="computeGraph()"> ☌ Conjunctions</label>
+      <label><input type="checkbox" id="filterHarm" checked onchange="computeGraph()"> ✨ Soft Aspects</label>
+      <label><input type="checkbox" id="filterDyn" checked onchange="computeGraph()"> ⚡ Hard Aspects</label>
+      <label><input type="checkbox" id="excludeMinorAspectCheck" onchange="computeGraph()"> ⏺  Exclude Minor Aspects</label>
+    </div>
+
+    <button class="btn primary" onclick="computeGraph()">▶ COMPUTE</button>
+    <button class="btn" onclick="exportReport()" style="color:var(--green);border-color:#1a4422">📄 TXT Report</button>
+  </div>
+</div>
+<div id="body">
+  <div id="left">
+    <!-- THEMES -->
+    <div>
+      <div class="panel-hdr" onclick="togglePanel('theme-inner','theme-toggle')"><span>THEMES</span><span class="tog" id="theme-toggle">▾</span></div>
+      <div id="theme-inner">
+        <div id="theme-list"><div id="theme-empty">No themes</div></div>
+        <div class="theme-divider">SAVE</div>
+        <div id="theme-name-row">
+          <input id="theme-name-in" placeholder="Theme name…">
+          <button class="btn green" onclick="saveToSession()">Save</button>
+        </div>
+        <div class="theme-divider">FILE</div>
+        <div class="file-btn-row">
+          <button class="btn green" onclick="exportJSON()">⬇ Export JSON</button>
+          <button class="btn" onclick="document.getElementById('file-in').click()">⬆ Import JSON</button>
+        </div>
+        <input id="file-in" type="file" accept=".json" style="display:none" onchange="importJSON(event)">
+      </div>
+    </div>
+
+    <!-- PLANETS -->
+    <div>
+      <div class="panel-hdr" onclick="togglePanel('planet-body-wrap','ptog')"><span>PLANETS</span><span class="tog" id="ptog">▾</span></div>
+      <div id="planet-body-wrap">
+        <table id="ptable"><thead><tr><th>Name</th><th>Sign</th><th>°</th><th>'</th><th>Type</th><th>℞</th><th></th></tr></thead><tbody id="planet-body"></tbody></table>
+        <div class="add-btn-wrap"><button class="btn" onclick="addRow()">+ Add</button></div>
+      </div>
+    </div>
+
+    <!-- TRANSITS -->
+    <div id="transit-panel">
+      <div class="panel-hdr" onclick="togglePanel('tr-body','trtog')">
+        <span>TRANSITS <span id="tr-count" style="color:var(--purple);font-weight:700">0</span></span>
+        <span style="display:flex;gap:5px;align-items:center">
+          <button class="btn" onclick="event.stopPropagation();clearTransits()" style="font-size:11px;padding:2px 8px;min-height:22px;color:var(--text3);border-color:#333">✕ clear</button>
+          <span class="tog" id="trtog">▸</span>
+        </span>
+      </div>
+      <div id="tr-body" style="display:none">
+        <div class="orb-note" style="color:var(--purple)">
+          Slow transit planets. Aspect to natal and among themselves.<br>
+          Orb type: same as the corresponding natal planet.
+        </div>
+        <table id="trtable">
+          <thead><tr><th>Name</th><th>Sign</th><th>°</th><th>'</th><th>Type</th><th>℞</th><th></th></tr></thead>
+          <tbody id="tr-planet-body"></tbody>
+        </table>
+        <div class="add-btn-wrap">
+          <button class="btn" style="width:100%;font-size:12px;color:var(--purple);border-color:#442266" onclick="addTransitRow()">+ Add transit</button>
+        </div>
+        <div style="padding:4px 8px 6px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+          <button class="btn" style="font-size:11px;padding:3px 10px;min-height:26px;color:var(--purple);border-color:#442266" onclick="loadSlowTransits()">↺ Load slow defaults</button>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text3);cursor:pointer;padding:3px 0">
+            <input type="checkbox" id="show-tt" onchange="computeGraph()" style="accent-color:var(--purple)"> T→T
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text3);cursor:pointer;padding:3px 0">
+            <input type="checkbox" id="overlay-only" onchange="computeGraph()" style="accent-color:var(--purple)"> Overlay only
+          </label>
+        </div>
+        <div style="padding:2px 8px 6px">
+          <div style="font-size:11px;color:#884499;font-weight:700;letter-spacing:1px;padding:2px 0 4px;text-transform:uppercase">Saved transit sets</div>
+          <div id="transit-sets-list"><div id="ts-empty" style="font-size:11px;color:var(--text3)">No saved sets.</div></div>
+          <div style="display:flex;gap:5px">
+            <input id="ts-name-in" type="text" placeholder="Set name…" maxlength="40">
+            <button class="btn" onclick="saveTransitSet()" style="font-size:11px;padding:3px 8px;min-height:26px;color:var(--green);border-color:#1a4422">Save</button>
+          </div>
+          <div style="display:flex;gap:5px;margin-top:4px">
+            <button class="btn green" onclick="exportTransitSets()" style="font-size:11px;padding:3px 8px;min-height:26px;flex:1">⬇ Export sets</button>
+            <button class="btn" onclick="document.getElementById('ts-file-in').click()" style="font-size:11px;padding:3px 8px;min-height:26px;flex:1">⬆ Import sets</button>
+          </div>
+          <input id="ts-file-in" type="file" accept=".json" style="display:none" onchange="importTransitSets(event)">
+        </div>
+      </div>
+    </div>
+
+    <!-- ORB (uniform aspect orbs) -->
+    <div>
+      <div class="panel-hdr" onclick="togglePanel('orb-body','otog')"><span>UNIFORM ASPECT ORBS</span><span class="tog" id="otog">▸</span></div>
+      <div id="orb-body" style="display:none">
+        <div class="orb-note">Maximum orb for each aspect type (same for all categories). Binary graph G_b uses these values only.</div>
+        <div class="orb-table-container" id="orbAspectContainer"></div>
+        <button class="btn" onclick="resetOrbAspectDefault()" style="margin:5px">↺ Reset Default (8°/7°/5°/3°)</button>
+        <button class="btn" onclick="resetOrbAspectClassic()" style="margin:5px;color:var(--gold);border-color:var(--gold)">↺ Reset Classic LOB65</button>
+        <div style="padding:5px 10px;color:var(--text3);font-size:11px">Retrograde factor: <input id="retroFactor" type="number" step="0.05" min="0.5" max="1" value="1.0" style="width:60px;background:#111;color:var(--cyan);border:1px solid var(--border2);"></div>
+        <div class="orb-note">Weights (Layer 3) computed with curve, k-exp, thr-point, aspect coefficient and retrograde.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div id="center">
+    <svg id="graph-svg"></svg>
+    <div id="legend-box"></div>
+    <div id="graph-status">Press COMPUTE</div>
+  </div>
+
+  <!-- RIGHT -->
+  <div id="right">
+    <div><div class="panel-hdr">METRICS</div><div id="metrics-wrap"><div class="empty-msg">—</div></div></div>
+    <div class="sep"></div>
+    <div><div class="panel-hdr">NODES</div><table id="ntable"><thead><tr><th>Node</th><th>deg</th><th>k</th><th>BC topol.</th><th>BC model</th><th>AP</th></tr></thead><tbody id="node-body"></tbody></table></div>
+    <div class="sep"></div>
+    <div><div class="panel-hdr">EDGES <span id="edge-count"></span></div><div id="edge-list"></div></div>
+    <div class="sep"></div>
+    <div><div class="panel-hdr" onclick="togglePanel('near-miss-list','nmtog')">NEAR MISS <span id="nm-count"></span><span class="tog" id="nmtog">▸</span></div><div id="near-miss-list" style="display:none"></div></div>
+  </div>
+</div>
+</div>
+<div id="tooltip"></div>
+<div id="toast"></div>
+
+<script src="graph.js"></script> 
+<script src="metrics.js"></script> 
+<script src="render.js"></script> 
+<script src="ui.js"></script> 
+<script src="app.js"></script>
+</body>
+</html>
