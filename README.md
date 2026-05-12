@@ -91,7 +91,7 @@ Script inclusion order in `index.html` is therefore important.
 
 1. Open `index.html` in a modern browser.
 2. Internet connection is required for the D3.js CDN.
-3. Press `↺ LOB11 preset` to load the example configuration.
+3. Press `↺ LOB65 preset` to load the example configuration.
 4. Press `▶ COMPUTE` to generate the graph.
 5. Modify planets, transits, filters, and orb settings as desired, then recompute.
 
@@ -121,7 +121,7 @@ Complete documentation is available here:
 
 | Control | Function |
 |---|---|
-| `↺ LOB11 preset` | Loads the example configuration |
+| `↺ LOB65 preset` | Loads the example configuration |
 | `⬚ New` | Loads an empty template |
 | `✕ Clear all` | Clears planets and graph |
 | `▶ COMPUTE` | Runs graph construction, metrics, and rendering |
