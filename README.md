@@ -113,7 +113,7 @@ http://localhost:8000
 
 Complete documentation is available here:
 
-- [User Manual](docs/user-manual.md)
+- [User Manual](/user-manual.md)
 
 ---
 
