@@ -2,8 +2,11 @@
 const KC_COLOR = ['#444','#4488FF','#00CCFF','#00FF88','#FFD700','#FF6600','#FF00FF'];
 
 function filterEdgesByAspect(edges, planets) {
-  // RIMOSSO il blocco che eliminava tutti gli archi nn in presenza di transiti.
+  const hasTransits = planets.some(p => p.isTransit === true);
   let filtered = edges;
+  if (hasTransits) {
+    filtered = filtered.filter(e => e.type !== 'nn');
+  }
   const showConj = document.getElementById('filterConj')?.checked ?? true;
   const showHarm = document.getElementById('filterHarm')?.checked ?? true;
   const showDyn = document.getElementById('filterDyn')?.checked ?? true;
@@ -23,14 +26,7 @@ function filterEdgesByAspect(edges, planets) {
 function drawGraph(planets, edges, analysis, activatedIdx = null, filterWeight = false, minWeight = 0) {
   if (simulation) { simulation.stop(); simulation = null; }
   let visibleEdges = filterEdgesByAspect(edges, planets);
-  
-  // Overlay only: se la checkbox è attiva, mostra solo archi che coinvolgono transiti (nt e tt)
-  const overlayOnly = document.getElementById('overlay-only')?.checked || false;
-  if (overlayOnly) {
-    visibleEdges = visibleEdges.filter(e => e.type !== 'nn');
-  }
   if (filterWeight) visibleEdges = visibleEdges.filter(e => e.w >= minWeight);
-  
   const svg = d3.select('#graph-svg');
   const W = svg.node().clientWidth || 800;
   const H = svg.node().clientHeight || 600;
