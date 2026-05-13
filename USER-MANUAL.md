@@ -25,6 +25,7 @@ LOB65 can be used for:
 - transit overlays
 - synthetic aspect structures
 - experimental graph analysis
+- secondary progressions as standalone natal charts
 
 ---
 
